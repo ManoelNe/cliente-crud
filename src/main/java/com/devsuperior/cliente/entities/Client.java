@@ -21,6 +21,8 @@ public class Client {
     @Column(unique = true)
     private String cpf;
     private Double income;
+
+    @Column(name = "birth_date")
     private LocalDate birthDate;
     private Integer children;
 
