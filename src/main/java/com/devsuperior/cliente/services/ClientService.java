@@ -3,12 +3,18 @@ package com.devsuperior.cliente.services;
 import com.devsuperior.cliente.dto.ClientDTO;
 import com.devsuperior.cliente.entities.Client;
 import com.devsuperior.cliente.repositories.ClientRepository;
+import com.devsuperior.cliente.services.exceptions.ResourceNotFoundException;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PathVariable;
+import tools.jackson.databind.exc.InvalidDefinitionException;
 
 @Service
 public class ClientService {
@@ -18,7 +24,7 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public ClientDTO findById(Long id){
-        Client client = repository.findById(id).get();
+        Client client = repository.findById(id).orElseThrow(()-> new ResourceNotFoundException("Rescurso Não encontrado"));
         return new ClientDTO(client);
     }
 
@@ -39,15 +45,24 @@ public class ClientService {
 
     @Transactional
     public ClientDTO update(Long id, ClientDTO dto){
-        Client entity = repository.getReferenceById(id);
-        copyDtoToEntity(dto, entity);
-        entity = repository.save(entity);
-        return new ClientDTO(entity);
-
+       try{
+           Client entity = repository.getReferenceById(id);
+           copyDtoToEntity(dto, entity);
+           entity = repository.save(entity);
+           return new ClientDTO(entity);
+       }
+       catch (EntityNotFoundException e) {
+           throw new ResourceNotFoundException("Recurso não encontrado. Id: " + id);
+       }
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.SUPPORTS)
     public void delete(Long id) {
+
+        if (!repository.existsById(id)) {
+            throw new ResourceNotFoundException("Recurso não encontrado. Id: " + id);
+        }
+
         repository.deleteById(id);
     }
 
